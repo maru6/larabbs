@@ -5,11 +5,79 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\Image;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 use App\Transformers\UserTransformer;
 use App\Http\Requests\Api\UserRequest;
 
 class UsersController extends Controller
 {
+
+     public function weappStore(UserRequest $request)
+    {
+
+        // 获取微信的 openid 和 session_key
+        $miniProgram = \EasyWeChat::miniProgram();
+        $data = $miniProgram->auth->session($request->code);
+
+        if (isset($data['errcode'])) {
+            return $this->response->errorUnauthorized('code 不正确');
+        }
+
+        $weappOpenid = $data['openid'];
+        $weixinSessionKey = $data['session_key'];
+        $nickname = $request->nickname;
+        $avatar = str_replace('/132', '/0', $request->avatar);//拿到分辨率高点的头像
+        $country = $request->country?$request->country:'';
+        $province = $request->province?$request->province:'';
+        $city = $request->city?$request->city:'';
+        $gender = $request->gender == '1' ? '1' : '2';//没传过性别的就默认女的吧，体验好些
+        $language = $request->language?$request->language:'';
+
+
+
+        // 如果 openid 对应的用户已存在，报错403
+        $user = User::where('weapp_openid', $data['openid'])->first();
+
+        // 创建用户
+        if (!$user) {
+          $user = User::create([
+            'weapp_openid' => $weappOpenid,
+            'weapp_session_key' => $weixinSessionKey,
+            'password' => $weixinSessionKey,
+            // 'avatar' => $request->avatar?$this->avatarUpyun($avatar):'',
+            'avatar' => $avatar,
+            'nickname' => $nickname,
+            'country' => $country,
+            'province' => $province,
+            'city' => $city,
+            'gender' => $gender,
+            'language' => $language,
+          ]);
+        }
+        //如果注册过的，就更新下下面的信息
+        $attributes['updated_at'] = now();
+        $attributes['weixin_session_key'] = $weixinSessionKey;
+        $attributes['avatar'] = $avatar;
+        if ($nickname) {
+            $attributes['nickname'] = $nickname;
+        }
+        if ($request->gender) {
+            $attributes['gender'] = $gender;
+        }
+
+        $user->update($attributes);
+
+        // meta 中返回 Token 信息
+        return $this->response->item($user, new UserTransformer())
+            ->setMeta([
+                'access_token' => \Auth::guard('api')->fromUser($user),
+                'token_type' => 'Bearer',
+                'expires_in' => \Auth::guard('api')->factory()->getTTL() * 60
+            ])
+            ->setStatusCode(201);
+    }
+
     public function store(UserRequest $request)
     {
         $verifyData = \Cache::get($request->verification_key);
