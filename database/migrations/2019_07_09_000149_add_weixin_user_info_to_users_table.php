@@ -19,7 +19,6 @@ class AddWeixinUserInfoToUsersTable extends Migration
             $table->string('province')->nullable();
             $table->string('city')->nullable();
             $table->string('gender')->default('2');
-            $table->string('province')->nullable();
             $table->string('language')->nullable();
         });
     }
@@ -37,9 +36,7 @@ class AddWeixinUserInfoToUsersTable extends Migration
             $table->dropColumn('province');
             $table->dropColumn('city');
             $table->dropColumn('gender');
-            $table->dropColumn('province');
             $table->dropColumn('language');
-        });
         });
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Image;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Handlers\ImageUploadHandler;
 use App\Transformers\UserTransformer;
 use App\Http\Requests\Api\UserRequest;
 
@@ -39,14 +40,15 @@ class UsersController extends Controller
         // 如果 openid 对应的用户已存在，报错403
         $user = User::where('weapp_openid', $data['openid'])->first();
 
+        $avatar 
+
         // 创建用户
         if (!$user) {
           $user = User::create([
             'weapp_openid' => $weappOpenid,
             'weapp_session_key' => $weixinSessionKey,
             'password' => $weixinSessionKey,
-            // 'avatar' => $request->avatar?$this->avatarUpyun($avatar):'',
-            'avatar' => $avatar,
+            'avatar' => $request->avatar?$this->avatarUpyun($avatar):'',
             'nickname' => $nickname,
             'country' => $country,
             'province' => $province,
@@ -134,5 +136,17 @@ class UsersController extends Controller
     public function activedIndex(User $user)
     {
         return $this->response->collection($user->getActiveUsers(), new UserTransformer());
+    }
+
+    private function avatarSave($avatar)
+    {
+        $avatarfile = file_get_contents($avatar);
+        $file_path = 'images/avatar/' . uniqid() . '.png';//微信的头像链接我也不知道怎么获取后缀，直接保存成png的了
+        $avatar->move($file_path,$avatarfile);
+
+        Storage::disk('upyun')->write($filename, $avatarfile);
+        return [
+            $wexinavatar = config('app.url')."$file_path/$avatarfile" 
+        ];//返回链接地址
     }
 }
