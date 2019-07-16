@@ -14,26 +14,30 @@ use App\Http\Requests\Api\UserRequest;
 class UsersController extends Controller
 {
 
-     public function weappStore(Request $request)
+     public function weappStore(request $request)
     {
 
         // 获取微信的 openid 和 session_key
         $miniProgram = \EasyWeChat::miniProgram();
         $data = $miniProgram->auth->session($request->code);
 
+
         if (isset($data['errcode'])) {
             return $this->response->errorUnauthorized('code 不正确');
         }
+        
+        $userInfo = json_decode($request->rawData,true);
 
         $weappOpenid = $data['openid'];
         $weixinSessionKey = $data['session_key'];
-        $nickname = $request->nickname;
-        $avatar = str_replace('/132', '/0', $request->avatar);//拿到分辨率高点的头像
-        $country = $request->country?$request->country:'';
-        $province = $request->province?$request->province:'';
-        $city = $request->city?$request->city:'';
-        $gender = $request->gender == '1' ? '1' : '2';//没传过性别的就默认女的吧，体验好些
-        $language = $request->language?$request->language:'';
+        $nickname = $userInfo['nickName'];
+        // $avatar = str_replace('/132', '/0', $userInfo['avatarUrl']);//拿到分辨率高点的头像
+        $avatar = $userInfo['avatarUrl'];//拿到分辨率高点的头像
+        $country = $userInfo['country']?$userInfo['country']:'';
+        $province = $userInfo['province']?$userInfo['province']:'';
+        $city = $userInfo['city']?$userInfo['city']:'';
+        $gender = $userInfo['gender'] == '1' ? '1' : '2';//没传过性别的就默认女的吧，体验好些
+        $language = $userInfo['language']?$userInfo['language']:'';
 
         // 如果 openid 对应的用户已存在，报错403
         $user = User::where('weapp_openid', $data['openid'])->first();
@@ -41,10 +45,11 @@ class UsersController extends Controller
         // 创建用户
         if (!$user) {
           $user = User::create([
+            'name' => $nickname,
             'weapp_openid' => $weappOpenid,
             'weapp_session_key' => $weixinSessionKey,
             'password' => $weixinSessionKey,
-            'avatar' => $request->avatar,
+            'avatar' => $avatar,
             // $this->avatarSave($avatar):'',
             'nickname' => $nickname,
             'country' => $country,
