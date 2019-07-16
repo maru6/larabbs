@@ -14,7 +14,7 @@ use App\Http\Requests\Api\UserRequest;
 class UsersController extends Controller
 {
 
-     public function weappStore(UserRequest $request)
+     public function weappStore(Request $request)
     {
 
         // 获取微信的 openid 和 session_key
@@ -35,12 +35,8 @@ class UsersController extends Controller
         $gender = $request->gender == '1' ? '1' : '2';//没传过性别的就默认女的吧，体验好些
         $language = $request->language?$request->language:'';
 
-
-
         // 如果 openid 对应的用户已存在，报错403
         $user = User::where('weapp_openid', $data['openid'])->first();
-
-        $avatar 
 
         // 创建用户
         if (!$user) {
@@ -48,7 +44,8 @@ class UsersController extends Controller
             'weapp_openid' => $weappOpenid,
             'weapp_session_key' => $weixinSessionKey,
             'password' => $weixinSessionKey,
-            'avatar' => $request->avatar?$this->avatarUpyun($avatar):'',
+            'avatar' => $request->avatar,
+            // $this->avatarSave($avatar):'',
             'nickname' => $nickname,
             'country' => $country,
             'province' => $province,
@@ -143,8 +140,7 @@ class UsersController extends Controller
         $avatarfile = file_get_contents($avatar);
         $file_path = 'images/avatar/' . uniqid() . '.png';//微信的头像链接我也不知道怎么获取后缀，直接保存成png的了
         $avatar->move($file_path,$avatarfile);
-
-        Storage::disk('upyun')->write($filename, $avatarfile);
+        // Storage::disk('upyun')->write($filename, $avatarfile);
         return [
             $wexinavatar = config('app.url')."$file_path/$avatarfile" 
         ];//返回链接地址
