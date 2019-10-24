@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\Topic;
 use App\Models\Reply;
+use App\Models\AdminReply;
 use Illuminate\Http\Request;
 use App\Transformers\ReplyTransformer;
 use App\Http\Requests\Api\ReplyRequest;
@@ -45,6 +46,17 @@ class RepliesController extends Controller
         $reply->save();
 
         return $this->response->item($reply, new ReplyTransformer())
+            ->setStatusCode(201);
+    }
+
+    public function adminStore(ReplyRequest $request, AdminReply $adminreply)
+    {
+        $adminreply->content = $request->content;
+        $adminreply->reply()->associate($reply_id);
+        $adminreply->user()->associate($this->user());
+        $adminreply->save();
+
+        return $this->response->item($adminreply, new AdminReplyTransformer())
             ->setStatusCode(201);
     }
 
